@@ -787,13 +787,14 @@ const uint16_t x264_cabac_entropy[128][2] =
 void x264_cabac_context_init( x264_cabac_t *cb, int i_slice_type, int i_qp, int i_model )
 {
     const int8_t (*cabac_context_init)[460][2];
+    int i;
 
     if( i_slice_type == SLICE_TYPE_I )
         cabac_context_init = &x264_cabac_context_init_I;
     else
         cabac_context_init = &x264_cabac_context_init_PB[i_model];
 
-    for( int i = 0; i < 460; i++ )
+    for( i = 0; i < 460; i++ )
         cb->state[i] = x264_clip3( (((*cabac_context_init)[i][0] * i_qp) >> 4) + (*cabac_context_init)[i][1], 1, 126 );
 }
 
@@ -877,9 +878,10 @@ void x264_cabac_encode_bypass( x264_cabac_t *cb, int b )
 void x264_cabac_encode_ue_bypass( x264_cabac_t *cb, int exp_bits, int val )
 {
     int k, i;
+    uint32_t x;
     for( k = exp_bits; val >= (1<<k); k++ )
         val -= 1<<k;
-    uint32_t x = (((1<<(k-exp_bits))-1)<<(k+1))+val;
+    x = (((1<<(k-exp_bits))-1)<<(k+1))+val;
     k = 2*k+1-exp_bits;
     i = ((k-1)&7)+1;
     do {

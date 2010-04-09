@@ -128,8 +128,10 @@ static void x264_lookahead_thread( x264_t *h )
 int x264_lookahead_init( x264_t *h, int i_slicetype_length )
 {
     x264_lookahead_t *look;
+    int i;
+    x264_t *look_h;
     CHECKED_MALLOCZERO( look, sizeof(x264_lookahead_t) );
-    for( int i = 0; i < h->param.i_threads; i++ )
+    for( i = 0; i < h->param.i_threads; i++ )
         h->thread[i]->lookahead = look;
 
     look->i_last_keyframe = - h->param.i_keyint_max;
@@ -146,7 +148,7 @@ int x264_lookahead_init( x264_t *h, int i_slicetype_length )
     if( !h->param.i_sync_lookahead )
         return 0;
 
-    x264_t *look_h = h->thread[h->param.i_threads];
+    look_h = h->thread[h->param.i_threads];
     *look_h = *h;
     if( x264_macroblock_cache_init( look_h ) )
         goto fail;
@@ -192,9 +194,10 @@ void x264_lookahead_put_frame( x264_t *h, x264_frame_t *frame )
 
 int x264_lookahead_is_empty( x264_t *h )
 {
+    int b_empty;
     x264_pthread_mutex_lock( &h->lookahead->ofbuf.mutex );
     x264_pthread_mutex_lock( &h->lookahead->next.mutex );
-    int b_empty = !h->lookahead->next.i_size && !h->lookahead->ofbuf.i_size;
+    b_empty = !h->lookahead->next.i_size && !h->lookahead->ofbuf.i_size;
     x264_pthread_mutex_unlock( &h->lookahead->next.mutex );
     x264_pthread_mutex_unlock( &h->lookahead->ofbuf.mutex );
     return b_empty;
@@ -202,9 +205,10 @@ int x264_lookahead_is_empty( x264_t *h )
 
 static void x264_lookahead_encoder_shift( x264_t *h )
 {
+    int i_frames;
     if( !h->lookahead->ofbuf.i_size )
         return;
-    int i_frames = h->lookahead->ofbuf.list[0]->i_bframes + 1;
+    i_frames = h->lookahead->ofbuf.list[0]->i_bframes + 1;
     while( i_frames-- )
     {
         x264_frame_push( h->frames.current, x264_frame_shift( h->lookahead->ofbuf.list ) );

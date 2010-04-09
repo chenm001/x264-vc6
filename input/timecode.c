@@ -82,9 +82,10 @@ static double correct_fps( double fps, timecode_hnd_t *h )
 
 static int try_mkv_timebase_den( double *fpss, timecode_hnd_t *h, int loop_num )
 {
+    int num;
     h->timebase_num = 0;
     h->timebase_den = MKV_TIMEBASE_DEN;
-    for( int num = 0; num < loop_num; num++ )
+    for( num = 0; num < loop_num; num++ )
     {
         int fps_den;
         double exponent;

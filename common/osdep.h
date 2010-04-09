@@ -38,13 +38,40 @@
 #endif
 
 #ifndef HAVE_LOG2F
-#define log2f(x) (logf(x)/0.693147180559945f)
+#ifndef _MSC_VER
+    #define log2f(x) (logf(x)/0.693147180559945f)
+#else
+    #define log2f(x) log2(x)
+#endif
 #define log2(x) (log(x)/0.693147180559945)
 #endif
 
 #ifdef _WIN32
 #include <io.h>    // _setmode()
 #include <fcntl.h> // _O_BINARY
+#endif
+
+#ifdef _MSC_VER
+#include <math.h>
+#define inline __inline
+#define strcasecmp stricmp
+#define strncasecmp strnicmp
+#define snprintf _snprintf
+#define fabsf fabs
+#if _MSC_VER > 1300
+#define fseek _fseeki64
+#define ftell _ftelli64
+#define strtok_r strtok_s
+#else
+static double round(double x)
+{
+    return (x > 0) ? floor(x + 0.5) : ceil(x - 0.5);
+}
+#endif
+#define isfinite _finite
+#define _CRT_SECURE_NO_DEPRECATE
+//#define X264_VERSION "git-vc6" // no configure script for msvc
+#define HAVE_PTHREAD 1
 #endif
 
 #if (defined(SYS_OPENBSD) && !defined(isfinite)) || defined(SYS_SunOS)
@@ -57,7 +84,11 @@
 #endif
 #endif
 
+#if _MSC_VER <= 1300
+#define DECLARE_ALIGNED( var, n ) __declspec(align(n)) var
+#else
 #define DECLARE_ALIGNED( var, n ) var __attribute__((aligned(n)))
+#endif
 #define ALIGNED_16( var ) DECLARE_ALIGNED( var, 16 )
 #define ALIGNED_8( var )  DECLARE_ALIGNED( var, 8 )
 #define ALIGNED_4( var )  DECLARE_ALIGNED( var, 4 )
@@ -73,8 +104,13 @@
     uint8_t name##_u [sizeof(type sub1 __VA_ARGS__) + 7]; \
     type (*name) __VA_ARGS__ = (void*)((intptr_t)(name##_u+7) & ~7)
 #else
+#if _MSC_VER <= 1300
+#define ALIGNED_ARRAY_8( type, name, sub1, sub2 )\
+    ALIGNED_8( type name sub1 sub2 )
+#else
 #define ALIGNED_ARRAY_8( type, name, sub1, ... )\
     ALIGNED_8( type name sub1 __VA_ARGS__ )
+#endif
 #endif
 
 #ifdef ARCH_ARM
@@ -82,8 +118,13 @@
     uint8_t name##_u [sizeof(type sub1 __VA_ARGS__) + 15];\
     type (*name) __VA_ARGS__ = (void*)((intptr_t)(name##_u+15) & ~15)
 #else
+#if _MSC_VER <= 1300
+#define ALIGNED_ARRAY_16( type, name, sub1, sub2 )\
+    ALIGNED_16( type name sub1 sub2 )
+#else
 #define ALIGNED_ARRAY_16( type, name, sub1, ... )\
     ALIGNED_16( type name sub1 __VA_ARGS__ )
+#endif
 #endif
 
 #if defined(__GNUC__) && (__GNUC__ > 3 || __GNUC__ == 3 && __GNUC_MINOR__ > 0)
@@ -119,7 +160,6 @@ static inline int x264_pthread_create( x264_pthread_t *t, void *a, void *(*f)(vo
 #ifndef usleep
 #define usleep(t)                    snooze(t)
 #endif
-#define HAVE_PTHREAD 1
 
 #elif defined(HAVE_PTHREAD)
 #include <pthread.h>
@@ -252,7 +292,7 @@ static int ALWAYS_INLINE x264_ctz( uint32_t x )
 #endif
 
 #ifdef USE_REAL_PTHREAD
-#ifdef SYS_MINGW
+#if defined(SYS_MINGW) || defined(_MSC_VER)
 #define x264_lower_thread_priority(p)\
 {\
     x264_pthread_t handle = pthread_self();\
@@ -275,7 +315,11 @@ static inline uint8_t x264_is_regular_file( FILE *filehandle )
     struct stat file_stat;
     if( fstat( fileno( filehandle ), &file_stat ) )
         return 0;
+#if _MSC_VER < 1300
+    return 0;
+#else
     return S_ISREG( file_stat.st_mode );
+#endif
 }
 
 #endif /* X264_OSDEP_H */

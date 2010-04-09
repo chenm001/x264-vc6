@@ -23,7 +23,9 @@
 
 uint64_t dbl2int( double value )
 {
-    return (union {double f; uint64_t i;}){value}.i;
+    union {double f; uint64_t i;} x;
+    x.f = value;
+    return x.i;
 }
 
 /* Put functions  */

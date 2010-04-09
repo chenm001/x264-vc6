@@ -35,6 +35,10 @@
 #include "x264.h"
 #include "muxers.h"
 
+#if _MSC_VER > 1300
+#   include "config.h"
+#endif
+
 #ifdef _WIN32
 #include <windows.h>
 #else
@@ -120,12 +124,13 @@ enum pulldown_type_e
 
 static const cli_pulldown_t pulldown_values[] =
 {
-    [X264_PULLDOWN_22]     = {1,  {TB},                                   2.0},
-    [X264_PULLDOWN_32]     = {4,  {TBT, BT, BTB, TB},                     1.25},
-    [X264_PULLDOWN_64]     = {2,  {PIC_STRUCT_DOUBLE, PIC_STRUCT_TRIPLE}, 1.0},
-    [X264_PULLDOWN_DOUBLE] = {1,  {PIC_STRUCT_DOUBLE},                    2.0},
-    [X264_PULLDOWN_TRIPLE] = {1,  {PIC_STRUCT_TRIPLE},                    3.0},
-    [X264_PULLDOWN_EURO]   = {24, {TBT, BT, BT, BT, BT, BT, BT, BT, BT, BT, BT, BT,
+    {0, {0}, 0.0},
+    /*[X264_PULLDOWN_22]     =*/ {1,  {TB},                                   2.0},
+    /*[X264_PULLDOWN_32]     =*/ {4,  {TBT, BT, BTB, TB},                     1.25},
+    /*[X264_PULLDOWN_64]     =*/ {2,  {PIC_STRUCT_DOUBLE, PIC_STRUCT_TRIPLE}, 1.0},
+    /*[X264_PULLDOWN_DOUBLE] =*/ {1,  {PIC_STRUCT_DOUBLE},                    2.0},
+    /*[X264_PULLDOWN_TRIPLE] =*/ {1,  {PIC_STRUCT_TRIPLE},                    3.0},
+    /*[X264_PULLDOWN_EURO]   =*/ {24, {TBT, BT, BT, BT, BT, BT, BT, BT, BT, BT, BT, BT,
                                    BTB, TB, TB, TB, TB, TB, TB, TB, TB, TB, TB, TB}, 25.0/24.0}
 };
 
@@ -794,6 +799,7 @@ static int select_output( const char *muxer, char *filename, x264_param_t *param
 static int select_input( const char *demuxer, char *used_demuxer, char *filename,
                          hnd_t *p_handle, video_info_t *info, cli_input_opt_t *opt )
 {
+    const char *module;
     const char *ext = get_filename_extension( filename );
     int b_regular = strcmp( filename, "-" );
     int b_auto = !strcasecmp( demuxer, "auto" );
@@ -808,7 +814,7 @@ static int select_input( const char *demuxer, char *used_demuxer, char *filename
             fclose( f );
         }
     }
-    const char *module = b_auto ? ext : demuxer;
+    module = b_auto ? ext : demuxer;
 
     if( !strcasecmp( module, "avs" ) || !strcasecmp( ext, "d2v" ) || !strcasecmp( ext, "dga" ) )
     {
@@ -873,7 +879,8 @@ static int select_input( const char *demuxer, char *used_demuxer, char *filename
 
 static int parse_enum_name( const char *arg, const char * const *names, const char **dst )
 {
-    for( int i = 0; names[i]; i++ )
+    int i;
+    for( i = 0; names[i]; i++ )
         if( !strcasecmp( arg, names[i] ) )
         {
             *dst = names[i];
@@ -884,7 +891,8 @@ static int parse_enum_name( const char *arg, const char * const *names, const ch
 
 static int parse_enum_value( const char *arg, const char * const *names, int *dst )
 {
-    for( int i = 0; names[i]; i++ )
+    int i;
+    for( i = 0; names[i]; i++ )
         if( !strcasecmp( arg, names[i] ) )
         {
             *dst = i;
@@ -913,6 +921,8 @@ static int Parse( int argc, char **argv, x264_param_t *param, cli_opt_t *opt )
     cli_input_opt_t input_opt;
     char *preset = NULL;
     char *tune = NULL;
+    video_info_t info = {0};
+    char demuxername[5];
 
     x264_param_default( &defaults );
 
@@ -1073,7 +1083,8 @@ generic_option:
             {
                 if( long_options_index < 0 )
                 {
-                    for( int i = 0; long_options[i].name; i++ )
+                    int i;
+                    for( i = 0; long_options[i].name; i++ )
                         if( long_options[i].val == c )
                         {
                             long_options_index = i;
@@ -1124,8 +1135,6 @@ generic_option:
 
     input_filename = argv[optind++];
     input_opt.resolution = optind < argc ? argv[optind++] : NULL;
-    video_info_t info = {0};
-    char demuxername[5];
 
     /* set info flags to param flags to be overwritten by demuxer as necessary. */
     info.csp        = param->i_csp;
@@ -1249,7 +1258,8 @@ generic_option:
     if( !b_user_ref )
     {
         int mbs = (((param->i_width)+15)>>4) * (((param->i_height)+15)>>4);
-        for( int i = 0; x264_levels[i].level_idc != 0; i++ )
+        int i;
+        for( i = 0; x264_levels[i].level_idc != 0; i++ )
             if( param->i_level_idc == x264_levels[i].level_idc )
             {
                 while( mbs * 384 * param->i_frame_reference > x264_levels[i].dpb &&
@@ -1428,7 +1438,11 @@ static int  Encode( x264_param_t *param, cli_opt_t *opt )
     ticks_per_frame = (int64_t)param->i_timebase_den * param->i_fps_den / param->i_timebase_num / param->i_fps_num;
     if( ticks_per_frame < 1 )
     {
+#if _MSC_VER < 1300
+        fprintf( stderr, "x264 [error]: ticks_per_frame invalid: %I64d\n", ticks_per_frame );
+#else
         fprintf( stderr, "x264 [error]: ticks_per_frame invalid: %"PRId64"\n", ticks_per_frame );
+#endif
         return -1;
     }
 
@@ -1454,6 +1468,7 @@ static int  Encode( x264_param_t *param, cli_opt_t *opt )
     /* Encode frames */
     for( i_frame = 0, i_frame_output = 0; b_ctrl_c == 0 && (i_frame < i_frame_total || i_frame_total == 0); )
     {
+        int64_t output_pts;
         if( input.read_frame( &pic, opt->hin, i_frame + opt->i_seek ) )
             break;
 
@@ -1469,14 +1484,18 @@ static int  Encode( x264_param_t *param, cli_opt_t *opt )
         else if( opt->timebase_convert_multiplier )
             pic.i_pts = (int64_t)( pic.i_pts * opt->timebase_convert_multiplier + 0.5 );
 
-        int64_t output_pts = pic.i_pts * dts_compress_multiplier;   /* pts libx264 returns */
+        output_pts = pic.i_pts * dts_compress_multiplier;   /* pts libx264 returns */
 
         if( pic.i_pts <= largest_pts )
         {
             if( param->i_log_level >= X264_LOG_WARNING )
             {
                 if( param->i_log_level >= X264_LOG_DEBUG || pts_warning_cnt < MAX_PTS_WARNING )
+#if _MSC_VER >= 1300
                     fprintf( stderr, "x264 [warning]: non-strictly-monotonic pts at frame %d (%"PRId64" <= %"PRId64")\n",
+#else
+                    fprintf( stderr, "x264 [warning]: non-strictly-monotonic pts at frame %d (%I64d <= %I64d)\n",
+#endif
                              i_frame, output_pts, largest_pts * dts_compress_multiplier );
                 else if( pts_warning_cnt == MAX_PTS_WARNING )
                     fprintf( stderr, "x264 [warning]: too many nonmonotonic pts warnings, suppressing further ones\n" );

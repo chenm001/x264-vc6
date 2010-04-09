@@ -280,12 +280,13 @@ static int x264_param_apply_preset( x264_param_t *param, const char *preset )
 
 static int x264_param_apply_tune( x264_param_t *param, const char *tune )
 {
+    char *s;
+    int psy_tuning_used = 0;
     char *tmp = x264_malloc( strlen( tune ) );
     if( !tmp )
         return -1;
     tmp = strcpy( tmp, tune );
-    char *s = strtok( tmp, ",./-+" );
-    int psy_tuning_used = 0;
+    s = strtok( tmp, ",./-+" );
     while( s )
     {
         if( !strncasecmp( s, "film", 4 ) )
@@ -451,7 +452,8 @@ int x264_param_apply_profile( x264_param_t *param, const char *profile )
 
 static int parse_enum( const char *arg, const char * const *names, int *dst )
 {
-    for( int i = 0; names[i]; i++ )
+    int i;
+    for( i = 0; names[i]; i++ )
         if( !strcmp( arg, names[i] ) )
         {
             *dst = i;

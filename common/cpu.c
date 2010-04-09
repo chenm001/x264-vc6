@@ -97,6 +97,7 @@ uint32_t x264_cpu_detect( void )
     uint32_t vendor[4] = {0};
     int max_extended_cap;
     int cache;
+    int j;
 
 #ifndef ARCH_X86_64
     if( !x264_cpu_cpuid_test() )
@@ -196,7 +197,7 @@ uint32_t x264_cpu_detect( void )
                 x264_cpu_cpuid( 2, buf+0, buf+1, buf+2, buf+3 );
                 max = buf[0]&0xff;
                 buf[0] &= ~0xff;
-                for( int j = 0; j < 4; j++ )
+                for( j = 0; j < 4; j++ )
                     if( !(buf[j]>>31) )
                         while( buf[j] )
                         {
@@ -221,6 +222,9 @@ uint32_t x264_cpu_detect( void )
     cpu |= X264_CPU_STACK_MOD4;
 #endif
 
+#if defined(_MSC_VER) && !defined(__INTEL_COMPILER)
+    //cpu &= ~X264_CPU_SSE2;
+#endif
     return cpu;
 }
 

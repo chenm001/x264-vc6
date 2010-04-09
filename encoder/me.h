@@ -25,7 +25,7 @@
 #define X264_ME_H
 
 #define COST_MAX (1<<28)
-#define COST_MAX64 (1ULL<<60)
+#define COST_MAX64 (UINT64_C(1)<<60)
 
 typedef struct
 {

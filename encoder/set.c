@@ -24,6 +24,9 @@
 #include <math.h>
 
 #include "common/common.h"
+#if _MSC_VER > 1300
+#   include "config.h"
+#endif
 #include "set.h"
 
 #define bs_write_ue bs_write_ue_big
@@ -33,8 +36,9 @@ static const uint8_t num_clock_ts[10] = { 0, 1, 1, 1, 2, 2, 3, 3, 2, 3 };
 
 static void transpose( uint8_t *buf, int w )
 {
-    for( int i = 0; i < w; i++ )
-        for( int j = 0; j < i; j++ )
+    int i, j;
+    for( i = 0; i < w; i++ )
+        for( j = 0; j < i; j++ )
             XCHG( uint8_t, buf[w*i+j], buf[w*j+i] );
 }
 
@@ -46,6 +50,7 @@ static void scaling_list_write( bs_t *s, x264_pps_t *pps, int idx )
     const uint8_t *def_list = (idx==CQM_4IC) ? pps->scaling_list[CQM_4IY]
                             : (idx==CQM_4PC) ? pps->scaling_list[CQM_4PY]
                             : x264_cqm_jvt[idx];
+    int j;
     if( !memcmp( list, def_list, len ) )
         bs_write( s, 1, 0 ); // scaling_list_present_flag
     else if( !memcmp( list, x264_cqm_jvt[idx], len ) )
@@ -65,7 +70,7 @@ static void scaling_list_write( bs_t *s, x264_pps_t *pps, int idx )
         if( run < len && len - run < bs_size_se( (int8_t)-list[zigzag[run]] ) )
             run = len;
 
-        for( int j = 0; j < run; j++ )
+        for( j = 0; j < run; j++ )
             bs_write_se( s, (int8_t)(list[zigzag[j]] - (j>0 ? list[zigzag[j-1]] : 8)) ); // delta
 
         if( run < len )
@@ -75,10 +80,11 @@ static void scaling_list_write( bs_t *s, x264_pps_t *pps, int idx )
 
 static uint8_t *x264_sei_write_header( bs_t *s, int payload_type )
 {
+    uint8_t *p_start;
     bs_write( s, 8, payload_type );
 
     bs_flush( s );
-    uint8_t *p_start = s->p;
+    p_start = s->p;
     bs_realign( s );
 
     bs_write( s, 8, 0 );
@@ -416,6 +422,7 @@ void x264_sps_write( bs_t *s, x264_sps_t *sps )
 
 void x264_pps_init( x264_pps_t *pps, int i_id, x264_param_t *param, x264_sps_t *sps )
 {
+    int i, j;
     pps->i_id = i_id;
     pps->i_sps_id = sps->i_id;
     pps->b_cabac = param->b_cabac;
@@ -443,11 +450,11 @@ void x264_pps_init( x264_pps_t *pps, int i_id, x264_param_t *param, x264_sps_t *
     switch( pps->i_cqm_preset )
     {
     case X264_CQM_FLAT:
-        for( int i = 0; i < 6; i++ )
+        for( i = 0; i < 6; i++ )
             pps->scaling_list[i] = x264_cqm_flat16;
         break;
     case X264_CQM_JVT:
-        for( int i = 0; i < 6; i++ )
+        for( i = 0; i < 6; i++ )
             pps->scaling_list[i] = x264_cqm_jvt[i];
         break;
     case X264_CQM_CUSTOM:
@@ -464,8 +471,8 @@ void x264_pps_init( x264_pps_t *pps, int i_id, x264_param_t *param, x264_sps_t *
         pps->scaling_list[CQM_4PC] = param->cqm_4pc;
         pps->scaling_list[CQM_8IY+4] = param->cqm_8iy;
         pps->scaling_list[CQM_8PY+4] = param->cqm_8py;
-        for( int i = 0; i < 6; i++ )
-            for( int j = 0; j < (i < 4 ? 16 : 64); j++ )
+        for( i = 0; i < 6; i++ )
+            for( j = 0; j < (i < 4 ? 16 : 64); j++ )
                 if( pps->scaling_list[i][j] == 0 )
                     pps->scaling_list[i] = x264_cqm_jvt[i];
         break;
@@ -522,8 +529,9 @@ void x264_pps_write( bs_t *s, x264_pps_t *pps )
 
 void x264_sei_recovery_point_write( x264_t *h, bs_t *s, int recovery_frame_cnt )
 {
+    uint8_t *p_start;
     bs_realign( s );
-    uint8_t *p_start = x264_sei_write_header( s, SEI_RECOVERY_POINT );
+    p_start = x264_sei_write_header( s, SEI_RECOVERY_POINT );
 
     bs_write_ue( s, recovery_frame_cnt ); // recovery_frame_cnt
     bs_write( s, 1, 1 ); //exact_match_flag 1
@@ -536,7 +544,7 @@ void x264_sei_recovery_point_write( x264_t *h, bs_t *s, int recovery_frame_cnt )
 
 int x264_sei_version_write( x264_t *h, bs_t *s )
 {
-    int i;
+    int i, j;
     // random ID number generated according to ISO-11578
     const uint8_t uuid[16] = {
         0xdc, 0x45, 0xe9, 0xbd, 0xe6, 0xd9, 0x48, 0xb7,
@@ -562,9 +570,9 @@ int x264_sei_version_write( x264_t *h, bs_t *s )
         bs_write( s, 8, 255 );
     bs_write( s, 8, length-i );
 
-    for( int j = 0; j < 16; j++ )
+    for( j = 0; j < 16; j++ )
         bs_write( s, 8, uuid[j] );
-    for( int j = 0; j < length-16; j++ )
+    for( j = 0; j < length-16; j++ )
         bs_write( s, 8, version[j] );
 
     bs_rbsp_trailing( s );
@@ -581,8 +589,9 @@ fail:
 void x264_sei_buffering_period_write( x264_t *h, bs_t *s )
 {
     x264_sps_t *sps = h->sps;
+    uint8_t *p_start;
     bs_realign( s );
-    uint8_t *p_start = x264_sei_write_header( s, SEI_BUFFERING_PERIOD );
+    p_start = x264_sei_write_header( s, SEI_BUFFERING_PERIOD );
 
     bs_write_ue( s, sps->i_id );
 
@@ -598,9 +607,11 @@ void x264_sei_buffering_period_write( x264_t *h, bs_t *s )
 
 void x264_sei_pic_timing_write( x264_t *h, bs_t *s )
 {
+    int i;
     x264_sps_t *sps = h->sps;
+    uint8_t *p_start;
     bs_realign( s );
-    uint8_t *p_start = x264_sei_write_header( s, SEI_PIC_TIMING );
+    p_start = x264_sei_write_header( s, SEI_PIC_TIMING );
 
     if( sps->vui.b_nal_hrd_parameters_present || sps->vui.b_vcl_hrd_parameters_present )
     {
@@ -614,7 +625,7 @@ void x264_sei_pic_timing_write( x264_t *h, bs_t *s )
 
         // These clock timestamps are not standardised so we don't set them
         // They could be time of origin, capture or alternative ideal display
-        for( int i = 0; i < num_clock_ts[h->fenc->i_pic_struct]; i++ )
+        for( i = 0; i < num_clock_ts[h->fenc->i_pic_struct]; i++ )
             bs_write1( s, 0 ); // clock_timestamp_flag
     }
 
@@ -624,9 +635,10 @@ void x264_sei_pic_timing_write( x264_t *h, bs_t *s )
 
 void x264_filler_write( x264_t *h, bs_t *s, int filler )
 {
+    int i;
     bs_realign( s );
 
-    for( int i = 0; i < filler; i++ )
+    for( i = 0; i < filler; i++ )
         bs_write( s, 8, 0xff );
 
     bs_rbsp_trailing( s );
@@ -654,12 +666,20 @@ const x264_level_t x264_levels[] =
     { 0 }
 };
 
+#if (_MSC_VER > 1300)
 #define ERROR(...)\
 {\
     if( verbose )\
         x264_log( h, X264_LOG_WARNING, __VA_ARGS__ );\
     ret = 1;\
 }
+#else
+#define ERROR() \
+{\
+    ret = 1;\
+}
+#pragma warning(disable:4002)   /* disable warning "too many actual parameters for macro" */
+#endif
 
 int x264_validate_levels( x264_t *h, int verbose )
 {

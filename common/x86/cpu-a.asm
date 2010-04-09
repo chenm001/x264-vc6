@@ -96,13 +96,19 @@ cglobal x264_cpu_cpuid, 0,6
 cglobal x264_stack_align
     push ebp
     mov  ebp, esp
-    sub  esp, 8
+    sub  esp, 20
     and  esp, ~15
     mov  ecx, [ebp+8]
     mov  edx, [ebp+12]
     mov  [esp], edx
     mov  edx, [ebp+16]
     mov  [esp+4], edx
+    mov  edx, [ebp+20]
+    mov  [esp+8], edx
+    mov  edx, [ebp+24]
+    mov  [esp+12], edx
+    mov  edx, [ebp+28]
+    mov  [esp+16], edx
     call ecx
     leave
     ret

@@ -45,6 +45,7 @@ static int open_file( char *psz_filename, hnd_t *p_handle, video_info_t *info, c
     char *tokend, *header_end;
     int colorspace = X264_CSP_NONE;
     int alt_colorspace = X264_CSP_NONE;
+    char *tokstart;
     if( !h )
         return -1;
 
@@ -79,7 +80,7 @@ static int open_file( char *psz_filename, hnd_t *p_handle, video_info_t *info, c
     /* Scan properties */
     header_end = &header[i+1]; /* Include space */
     h->seq_header_len = i+1;
-    for( char *tokstart = &header[strlen( Y4M_MAGIC )+1]; tokstart < header_end; tokstart++ )
+    for( tokstart = &header[strlen( Y4M_MAGIC )+1]; tokstart < header_end; tokstart++ )
     {
         if( *tokstart == 0x20 )
             continue;
@@ -171,9 +172,10 @@ static int get_frame_total( hnd_t handle )
 
     if( x264_is_regular_file( h->fh ) )
     {
+        uint64_t i_size;
         uint64_t init_pos = ftell( h->fh );
         fseek( h->fh, 0, SEEK_END );
-        uint64_t i_size = ftell( h->fh );
+        i_size = ftell( h->fh );
         fseek( h->fh, init_pos, SEEK_SET );
         i_frame_total = (int)((i_size - h->seq_header_len) /
                               (3*(h->width*h->height)/2+h->frame_header_len));
@@ -195,8 +197,13 @@ static int read_frame_internal( x264_picture_t *p_pic, y4m_hnd_t *h )
     header[slen] = 0;
     if( strncmp( header, Y4M_FRAME_MAGIC, slen ) )
     {
+#if _MSC_VER < 1300
+        fprintf( stderr, "y4m [error]: bad header magic (%X <=> %s)\n",
+                 M32(header), header );
+#else
         fprintf( stderr, "y4m [error]: bad header magic (%"PRIx32" <=> %s)\n",
                  M32(header), header );
+#endif
         return -1;
     }
 

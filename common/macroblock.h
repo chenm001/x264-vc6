@@ -338,6 +338,7 @@ static ALWAYS_INLINE uint32_t pack16to32_mask( int a, int b )
 #define array_non_zero_int array_non_zero_int
 static ALWAYS_INLINE int array_non_zero_int( int16_t *v, int i_count )
 {
+    int i;
     if(i_count == 8)
         return !!M64( &v[0] );
     else if(i_count == 16)
@@ -346,7 +347,7 @@ static ALWAYS_INLINE int array_non_zero_int( int16_t *v, int i_count )
         return !!(M64( &v[0] ) | M64( &v[4] ) | M64( &v[8] ) | M64( &v[12] ));
     else
     {
-        for( int i = 0; i < i_count; i+=4 )
+        for( i = 0; i < i_count; i+=4 )
             if( M64( &v[i] ) ) return 1;
         return 0;
     }

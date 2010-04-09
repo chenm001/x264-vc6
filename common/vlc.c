@@ -873,8 +873,10 @@ vlc_large_t x264_level_token[7][LEVEL_TABLE_SIZE];
 
 void x264_init_vlc_tables()
 {
-    for( int i_suffix = 0; i_suffix < 7; i_suffix++ )
-        for( int16_t level = -LEVEL_TABLE_SIZE/2; level < LEVEL_TABLE_SIZE/2; level++ )
+    int i_suffix;
+    int16_t level;
+    for( i_suffix = 0; i_suffix < 7; i_suffix++ )
+        for( level = -LEVEL_TABLE_SIZE/2; level < LEVEL_TABLE_SIZE/2; level++ )
         {
             int mask = level >> 15;
             int abs_level = (level^mask)-mask;

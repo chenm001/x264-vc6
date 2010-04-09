@@ -209,15 +209,16 @@ static int mk_close_context( mk_context *c, unsigned *off )
 static void mk_destroy_contexts( mk_writer *w )
 {
     mk_context *next;
+    mk_context *cur;
 
-    for( mk_context *cur = w->freelist; cur; cur = next )
+    for( cur = w->freelist; cur; cur = next )
     {
         next = cur->next;
         free( cur->data );
         free( cur );
     }
 
-    for( mk_context *cur = w->actlist; cur; cur = next )
+    for( cur = w->actlist; cur; cur = next )
     {
         next = cur->next;
         free( cur->data );
@@ -409,8 +410,13 @@ static int mk_flush_frame( mk_writer *w )
         return 0;
 
     delta = w->frame_tc/w->timescale - w->cluster_tc_scaled;
+#if _MSC_VER <= 1300
+    if( delta > 32767 || delta < -32768 )
+        CHECK( mk_close_cluster( w ) );
+#else
     if( delta > 32767ll || delta < -32768ll )
         CHECK( mk_close_cluster( w ) );
+#endif
 
     if( !w->cluster )
     {
@@ -494,9 +500,10 @@ int mk_close( mk_writer *w, int64_t last_delta )
         ret = -1;
     if( w->wrote_header && x264_is_regular_file( w->fp ) )
     {
+        int64_t last_frametime, total_duration;
         fseek( w->fp, w->duration_ptr, SEEK_SET );
-        int64_t last_frametime = w->def_duration ? w->def_duration : last_delta;
-        int64_t total_duration = w->max_frame_tc+last_frametime;
+        last_frametime = w->def_duration ? w->def_duration : last_delta;
+        total_duration = w->max_frame_tc+last_frametime;
         if( mk_write_float_raw( w->root, (float)((double)total_duration / w->timescale) ) < 0 ||
             mk_flush_context_data( w->root ) < 0 )
             ret = -1;

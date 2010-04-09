@@ -110,25 +110,31 @@ extern void (*x264_cache_ref_func_table[10])(void *, uint32_t);\
 static ALWAYS_INLINE void x264_macroblock_cache_mv( x264_t *h, int x, int y, int width, int height, int i_list, uint32_t mv )
 {
     void *mv_cache = &h->mb.cache.mv[i_list][X264_SCAN8_0+x+8*y];
+#ifndef _MSC_VER
     if( x264_nonconstant_p( width ) || x264_nonconstant_p( height ) )
         x264_cache_mv_func_table[width + (height<<1)-3]( mv_cache, mv );
     else
+#endif
         x264_macroblock_cache_rect( mv_cache, width*4, height, 4, mv );
 }
 static ALWAYS_INLINE void x264_macroblock_cache_mvd( x264_t *h, int x, int y, int width, int height, int i_list, uint16_t mvd )
 {
     void *mvd_cache = &h->mb.cache.mvd[i_list][X264_SCAN8_0+x+8*y];
+#ifndef _MSC_VER
     if( x264_nonconstant_p( width ) || x264_nonconstant_p( height ) )
         x264_cache_mvd_func_table[width + (height<<1)-3]( mvd_cache, mvd );
     else
+#endif
         x264_macroblock_cache_rect( mvd_cache, width*2, height, 2, mvd );
 }
 static ALWAYS_INLINE void x264_macroblock_cache_ref( x264_t *h, int x, int y, int width, int height, int i_list, uint8_t ref )
 {
     void *ref_cache = &h->mb.cache.ref[i_list][X264_SCAN8_0+x+8*y];
+#ifndef _MSC_VER
     if( x264_nonconstant_p( width ) || x264_nonconstant_p( height ) )
         x264_cache_ref_func_table[width + (height<<1)-3]( ref_cache, ref );
     else
+#endif
         x264_macroblock_cache_rect( ref_cache, width, height, 1, ref );
 }
 static ALWAYS_INLINE void x264_macroblock_cache_skip( x264_t *h, int x, int y, int width, int height, int b_skip )
