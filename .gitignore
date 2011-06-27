@@ -23,3 +23,12 @@ checkasm
 *.y4m
 *.yuv
 x264_2pass.log
+
+*.[ip]db
+*.obj
+*.patch
+*.plg
+*.pch
+*.ncb
+*.ilk
+*.opt
